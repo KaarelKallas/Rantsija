@@ -1,0 +1,21 @@
+[
+
+    {
+        "name": "Kuressaare_linnateater",
+        "walking": "https://goo.gl/maps/3mX9b1vYk6U2",
+        "bus": "https://goo.gl/maps/1nX9b1vYk6U2",
+        "taxi": "https://goo.gl/maps/2nX9b1vYk6U2"
+    },
+    {
+        "name": "Swedbank",
+        "walking": "https://goo.gl/maps/4mX9b1vYk6U2",
+        "bus": "https://goo.gl/maps/5nX9b1vYk6U2",
+        "taxi": "https://goo.gl/maps/6nX9b1vYk6U2"
+    },
+    {
+        "name": "Saaremaa_vallavalitsus",
+        "walking": "https://goo.gl/maps/7mX9b1vYk6U2",
+        "bus": "https://goo.gl/maps/8nX9b1vYk6U2",
+        "taxi": "https://goo.gl/maps/9nX9b1vYk6U2"
+    }
+]

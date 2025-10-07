@@ -9,55 +9,58 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as DestinationRouteImport } from './routes/destination'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DestinationsIndexRouteImport } from './routes/destinations/index'
+import { Route as DestinationsDestinationRouteImport } from './routes/destinations/$destination'
 
-const DestinationRoute = DestinationRouteImport.update({
-  id: '/destination',
-  path: '/destination',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DestinationsIndexRoute = DestinationsIndexRouteImport.update({
+  id: '/destinations/',
+  path: '/destinations/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DestinationsDestinationRoute = DestinationsDestinationRouteImport.update({
+  id: '/destinations/$destination',
+  path: '/destinations/$destination',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/destination': typeof DestinationRoute
+  '/destinations/$destination': typeof DestinationsDestinationRoute
+  '/destinations': typeof DestinationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/destination': typeof DestinationRoute
+  '/destinations/$destination': typeof DestinationsDestinationRoute
+  '/destinations': typeof DestinationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/destination': typeof DestinationRoute
+  '/destinations/$destination': typeof DestinationsDestinationRoute
+  '/destinations/': typeof DestinationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/destination'
+  fullPaths: '/' | '/destinations/$destination' | '/destinations'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/destination'
-  id: '__root__' | '/' | '/destination'
+  to: '/' | '/destinations/$destination' | '/destinations'
+  id: '__root__' | '/' | '/destinations/$destination' | '/destinations/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DestinationRoute: typeof DestinationRoute
+  DestinationsDestinationRoute: typeof DestinationsDestinationRoute
+  DestinationsIndexRoute: typeof DestinationsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/destination': {
-      id: '/destination'
-      path: '/destination'
-      fullPath: '/destination'
-      preLoaderRoute: typeof DestinationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -65,12 +68,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/destinations/': {
+      id: '/destinations/'
+      path: '/destinations'
+      fullPath: '/destinations'
+      preLoaderRoute: typeof DestinationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/destinations/$destination': {
+      id: '/destinations/$destination'
+      path: '/destinations/$destination'
+      fullPath: '/destinations/$destination'
+      preLoaderRoute: typeof DestinationsDestinationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DestinationRoute: DestinationRoute,
+  DestinationsDestinationRoute: DestinationsDestinationRoute,
+  DestinationsIndexRoute: DestinationsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

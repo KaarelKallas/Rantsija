@@ -1,9 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import logo from '../logo.svg'
 
+
 export const Route = createFileRoute('/')({
   component: App,
+
 })
+console.log('Parent path:', Route.fullPath)
 
 function App() {
   return (
