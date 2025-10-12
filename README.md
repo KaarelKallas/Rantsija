@@ -299,3 +299,18 @@ Files prefixed with `demo` can be safely deleted. They are there to provide a st
 # Learn More
 
 You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
+
+
+## Kuressaare liikumisabi
+
+- Avaleht: kaart Kuressaarest ja valik sihtkohti.
+- Sihtkoha lehel: eelsalvestatud teekonna video + tekstilised ohukohad.
+
+### Arendaja juhised
+1. `npm i` (lisab `leaflet` ja `react-leaflet`)
+2. `npm run dev`
+3. Asenda failid kaustas `public/videos/` päris teekonnaklippidega (mp4).
+
+
+### Kaart ilma teekideta
+Avalehe kaart on OSM *iframe*. Märgised on Reacti `Link`-id, mille positsioon on CSS-iga (protsentides) paika pandud. Ei ole vaja `leaflet`/`react-leaflet` teeke.
