@@ -43,6 +43,7 @@ export default function KMLSatelliteMap() {
         }))
 
         setFeatures(extracted)
+        console.log('Loaded features from KML:', extracted)
       })
       .catch(console.error)
   }, [])
@@ -108,6 +109,7 @@ export default function KMLSatelliteMap() {
       {filteredFeatures
         .filter((f) => f.type === 'LineString')
         .map((f, i) => (
+            console.log('Drawing line with coordinates:', f.coordinates),
           <Polyline
             key={i}
             positions={(f.coordinates as number[][]).map((c) => [c[1], c[0]])}

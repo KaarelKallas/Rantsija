@@ -16,8 +16,8 @@ function SelectionPage() {
   const current = destinations.find(d => d.name === destination)
 
   const start = [58.253, 22.503]
-  const end = current?.coordinates
-
+  const end = current?.coordinates?.[0] || null
+   //console.log('Current destination coordinates:', end)
   const osrmMode = 'walking'
 
   useEffect(() => {
@@ -25,6 +25,7 @@ function SelectionPage() {
     const fetchRoute = async () => {
       try {
         const url = `https://router.project-osrm.org/route/v1/${osrmMode}/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`
+       // console.log('Fetching route from OSRM:', url)
         const res = await fetch(url)
         const data = await res.json()
         if (data.routes?.length) {

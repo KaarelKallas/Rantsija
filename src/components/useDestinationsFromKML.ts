@@ -1,57 +1,56 @@
-// src/routes/destinations/useDestinationsFromKML.ts
-import { useEffect, useState } from 'react';
-import { DOMParser } from 'xmldom';
-import xpath from 'xpath';
+import { useEffect, useState } from 'react'
 
-export interface Placemark {
-  id?: string;
-  name: string;
-  coordinates?: string;
-  type: 'Point' | 'LineString' | 'Polygon';
+export interface Destination {
+  name: string
+  coordinates: [number, number][] // For LineStrings, an array of lat/lng
+  type: 'Point' | 'LineString'
 }
 
-export function useDestinationsFromKML(kmlPath: string) {
-  const [placemarks, setPlacemarks] = useState<Placemark[]>([]);
+export function useDestinationsFromKML(kmlPath: string): Destination[] {
+  const [destinations, setDestinations] = useState<Destination[]>([])
 
   useEffect(() => {
     const fetchKML = async () => {
       try {
-        const res = await fetch(kmlPath);
-        if (!res.ok) return;
-        const kmlText = await res.text();
+        const res = await fetch(kmlPath)
+        const text = await res.text()
+        const parser = new DOMParser()
+        const kmlDoc = parser.parseFromString(text, 'application/xml')
+        const placemarks = Array.from(kmlDoc.getElementsByTagName('Placemark'))
 
-        const doc = new DOMParser().parseFromString(kmlText, 'text/xml');
-        const select = xpath.useNamespaces({
-          kml: 'http://www.opengis.net/kml/2.2',
-          gx: 'http://www.google.com/kml/ext/2.2',
-        });
+        const lines: Destination[] = placemarks
+          .map(pm => {
+            const nameEl = pm.getElementsByTagName('name')[0]
+            const name = nameEl?.textContent || 'Unnamed'
 
-        const nodes = select('//kml:Placemark', doc) as any[];
+            const lineEl = pm.getElementsByTagName('LineString')[0]
+            if (!lineEl) return null // skip non-LineString
 
-        const allPlacemarks: Placemark[] = nodes.map((node) => {
-          const nameNode = select('kml:name/text()', node)[0];
-          const pointNode = select('kml:Point/kml:coordinates/text()', node)[0];
-          const lineNode = select('kml:LineString/kml:coordinates/text()', node)[0];
-          const polygonNode = select('kml:Polygon/kml:outerBoundaryIs/kml:LinearRing/kml:coordinates/text()', node)[0];
+            const coordsEl = lineEl.getElementsByTagName('coordinates')[0]
+            if (!coordsEl) return null
 
-          return {
-            id: node.getAttribute('id') || undefined,
-            name: nameNode?.nodeValue || 'Unnamed',
-            coordinates: pointNode?.nodeValue || lineNode?.nodeValue || polygonNode?.nodeValue || undefined,
-            type: pointNode ? 'Point' : lineNode ? 'LineString' : polygonNode ? 'Polygon' : 'Point',
-          };
-        });
+            const coords: [number, number][] = coordsEl.textContent
+              ?.trim()
+              .split(/\s+/)
+              .map(pair => {
+                const [lon, lat] = pair.split(',').map(Number)
+                return [lat, lon] as [number, number]
+              }) || []
 
-        // filter out bus stations
-        const filtered = allPlacemarks.filter(pm => !/bussijaam/i.test(pm.name));
-        setPlacemarks(filtered);
-      } catch (error) {
-        console.error('Failed to load KML:', error);
+            if (coords.length === 0) return null
+
+            return { name, coordinates: coords, type: 'LineString' } as Destination
+          })
+          .filter((d): d is Destination => d !== null)
+
+        setDestinations(lines)
+      } catch (e) {
+        console.error('Failed to load KML', e)
       }
-    };
+    }
 
-    fetchKML();
-  }, [kmlPath]);
+    fetchKML()
+  }, [kmlPath])
 
-  return placemarks;
+  return destinations
 }
