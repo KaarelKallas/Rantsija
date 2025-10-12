@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import data from './data/data.json'
+import { useDestinationsFromKML } from './components/useDestinationsFromKML';
 
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'

@@ -1,31 +1,25 @@
-import { Link, Outlet, createFileRoute, useRouter } from '@tanstack/react-router'
-
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { useDestinationsFromKML } from '../../components/useDestinationsFromKML';
 export const Route = createFileRoute('/destinations/')({
-  component: Destinations,
+  component: DestinationsList,
 })
 
-function Destinations() {
+function DestinationsList() {
   const router = useRouter()
-  const { destinations } = router.options.context
-
+  const  destinations  = useDestinationsFromKML('/kml/routes.kml')
+    console.log('Loaded destinations:', destinations);
   return (
     <div className="p-6">
-      <h1 className="text-4xl font-bold my-8 text-center">Destinations</h1>
-
+      <h1 className="text-4xl font-bold mb-8 text-center">Destinations</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {destinations.map((destination) => (
-          <div key={destination.name} className="border rounded-lg p-4 shadow-lg">
-            <Link
-              to={destination.name}
-              activeProps={{ className: 'bg-blue-100 border-blue-500' }}
-            >
-              <h2 className="text-2xl font-semibold mb-2">{destination.name}</h2>
+        {destinations.map((d) => (
+          <div key={d.name} className="border rounded-lg p-4 shadow-lg">
+            <Link to={d.name} className="text-2xl font-semibold">
+              {d.name}
             </Link>
           </div>
         ))}
       </div>
-
-      <Outlet />
     </div>
   )
 }

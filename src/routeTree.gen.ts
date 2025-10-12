@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DestinationsIndexRouteImport } from './routes/destinations/index'
 import { Route as DestinationsDestinationRouteImport } from './routes/destinations/$destination'
+import { Route as DestinationsDestinationSelectionRouteImport } from './routes/destinations/$destination.$selection'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,34 +29,56 @@ const DestinationsDestinationRoute = DestinationsDestinationRouteImport.update({
   path: '/destinations/$destination',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DestinationsDestinationSelectionRoute =
+  DestinationsDestinationSelectionRouteImport.update({
+    id: '/$selection',
+    path: '/$selection',
+    getParentRoute: () => DestinationsDestinationRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/destinations/$destination': typeof DestinationsDestinationRoute
+  '/destinations/$destination': typeof DestinationsDestinationRouteWithChildren
   '/destinations': typeof DestinationsIndexRoute
+  '/destinations/$destination/$selection': typeof DestinationsDestinationSelectionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/destinations/$destination': typeof DestinationsDestinationRoute
+  '/destinations/$destination': typeof DestinationsDestinationRouteWithChildren
   '/destinations': typeof DestinationsIndexRoute
+  '/destinations/$destination/$selection': typeof DestinationsDestinationSelectionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/destinations/$destination': typeof DestinationsDestinationRoute
+  '/destinations/$destination': typeof DestinationsDestinationRouteWithChildren
   '/destinations/': typeof DestinationsIndexRoute
+  '/destinations/$destination/$selection': typeof DestinationsDestinationSelectionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/destinations/$destination' | '/destinations'
+  fullPaths:
+    | '/'
+    | '/destinations/$destination'
+    | '/destinations'
+    | '/destinations/$destination/$selection'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/destinations/$destination' | '/destinations'
-  id: '__root__' | '/' | '/destinations/$destination' | '/destinations/'
+  to:
+    | '/'
+    | '/destinations/$destination'
+    | '/destinations'
+    | '/destinations/$destination/$selection'
+  id:
+    | '__root__'
+    | '/'
+    | '/destinations/$destination'
+    | '/destinations/'
+    | '/destinations/$destination/$selection'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DestinationsDestinationRoute: typeof DestinationsDestinationRoute
+  DestinationsDestinationRoute: typeof DestinationsDestinationRouteWithChildren
   DestinationsIndexRoute: typeof DestinationsIndexRoute
 }
 
@@ -82,12 +105,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DestinationsDestinationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/destinations/$destination/$selection': {
+      id: '/destinations/$destination/$selection'
+      path: '/$selection'
+      fullPath: '/destinations/$destination/$selection'
+      preLoaderRoute: typeof DestinationsDestinationSelectionRouteImport
+      parentRoute: typeof DestinationsDestinationRoute
+    }
   }
 }
 
+interface DestinationsDestinationRouteChildren {
+  DestinationsDestinationSelectionRoute: typeof DestinationsDestinationSelectionRoute
+}
+
+const DestinationsDestinationRouteChildren: DestinationsDestinationRouteChildren =
+  {
+    DestinationsDestinationSelectionRoute:
+      DestinationsDestinationSelectionRoute,
+  }
+
+const DestinationsDestinationRouteWithChildren =
+  DestinationsDestinationRoute._addFileChildren(
+    DestinationsDestinationRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DestinationsDestinationRoute: DestinationsDestinationRoute,
+  DestinationsDestinationRoute: DestinationsDestinationRouteWithChildren,
   DestinationsIndexRoute: DestinationsIndexRoute,
 }
 export const routeTree = rootRouteImport

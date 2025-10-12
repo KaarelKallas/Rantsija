@@ -1,34 +1,32 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { createFileRoute, Outlet, Link, useRouter } from '@tanstack/react-router'
+import { useDestinationsFromKML } from '../../components/useDestinationsFromKML';
 
 export const Route = createFileRoute('/destinations/$destination')({
-  component: DestinationDetail,
+  component: DestinationPage,
 })
 
-function DestinationDetail() {
+function DestinationPage() {
+  const  destinations  = useDestinationsFromKML('/kml/routes.kml')
   const { destination } = Route.useParams()
   const router = useRouter()
-  const { destinations } = router.options.context
+  //const { destinations } = router.options.context
 
   const current = destinations.find((d) => d.name === destination)
-
-  if (!current) {
-    return <div className="text-center text-red-600 mt-8">Destination not found.</div>
-  }
+  if (!current) return <div className="text-red-600 mt-8 text-center">Destination not found</div>
 
   return (
-    <div className="mt-8 text-center">
-      <h2 className="text-3xl font-bold mb-4">{current.name}</h2>
-      <div className="flex flex-col gap-2 items-center">
-        <a href={current.walking} target="_blank" className="text-blue-600 underline">
-          🚶 Walking directions
-        </a>
-        <a href={current.bus} target="_blank" className="text-blue-600 underline">
-          🚌 Bus route
-        </a>
-        <a href={current.taxi} target="_blank" className="text-blue-600 underline">
-          🚕 Taxi link
-        </a>
+    <div className="p-6 text-center">
+      <h1 className="text-3xl font-bold mb-4">{destination}</h1>
+
+      <div className="flex justify-center gap-4 mb-4">
+      <div className="flex justify-center gap-4 mb-4">
+  <Link to={`/destinations/${destination}/walking`} className="text-blue-600 underline">🚶 Walking</Link>
+  <Link to={`/destinations/${destination}/bus`} className="text-blue-600 underline">🚌 Bus</Link>
+  <Link to={`/destinations/${destination}/taxi`} className="text-blue-600 underline">🚕 Taxi</Link>
+</div>
+
       </div>
+        <Outlet />
     </div>
   )
 }
