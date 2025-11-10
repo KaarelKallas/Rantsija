@@ -1,45 +1,47 @@
-import { StrictMode } from 'react'
+import { StrictMode, useRef } from 'react'
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import data from './data/data.json'
-import { useDestinationsFromKML } from './components/useDestinationsFromKML';
-
-// Import the generated route tree
 import { routeTree } from './routeTree.gen'
-
 import './styles.css'
 import reportWebVitals from './reportWebVitals.ts'
+import { useInactivityTimer } from './hooks/useInactivityTimer'
 
-// Create a new router instance
 const router = createRouter({
   routeTree,
-  context: {destinations: data},
+  context: { destinations: data, videoPlayingRef: null }, // placeholder
   defaultPreload: 'intent',
   scrollRestoration: true,
   defaultStructuralSharing: true,
   defaultPreloadStaleTime: 0,
-
 })
 
-// Register the router instance for type safety
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
   }
 }
 
-// Render the app
+function App() {
+  const videoPlayingRef = useRef(false)
+  useInactivityTimer(router, 20 * 60 * 1000, videoPlayingRef)
+
+  return (
+    <RouterProvider
+      router={router}
+      context={{ destinations: data, videoPlayingRef }}
+    />
+  )
+}
+
 const rootElement = document.getElementById('app')
 if (rootElement && !rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <StrictMode>
-      <RouterProvider router={router} />
+      <App />
     </StrictMode>,
   )
 }
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals()

@@ -50,8 +50,7 @@ function SelectionPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold mb-2 text-center">{destination}</h1>
-      <h2 className="text-2xl font-semibold mb-4 text-center">{selection.toUpperCase()}</h2>
+      <h1 className="text-3xl font-bold mb-2 pb-3 text-center">{destination}</h1>
 
       <KMLSatelliteMap />
 

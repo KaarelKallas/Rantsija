@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import logo from '../logo.svg'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import logo from '../logo.png'
 
 
 export const Route = createFileRoute('/')({
@@ -9,34 +9,21 @@ export const Route = createFileRoute('/')({
 console.log('Parent path:', Route.fullPath)
 
 function App() {
+
+
   return (
     <div className="text-center">
+            <Link to="/destinations/">
       <header className="min-h-screen flex flex-col items-center justify-center bg-[#282c34] text-white text-[calc(10px+2vmin)]">
+      <span className='text-6xl pb-8'>Räntsija teejuht</span>
         <img
           src={logo}
-          className="h-[40vmin] pointer-events-none animate-[spin_20s_linear_infinite]"
+          className="h-[50vmin] pointer-events-none"
           alt="logo"
         />
-        <p>
-          Edit <code>src/routes/index.tsx</code> and save to reload.
-        </p>
-        <a
-          className="text-[#61dafb] hover:underline"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-        <a
-          className="text-[#61dafb] hover:underline"
-          href="https://tanstack.com"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn TanStack
-        </a>
+<span className='text-6xl pt-4'>Alustamiseks puuduta ekraani</span>
       </header>
+      </Link>
     </div>
   )
 }

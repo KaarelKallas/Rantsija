@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Polyline, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import * as toGeoJSON from 'togeojson'
-import { useParams } from '@tanstack/react-router'
+import { useParams, useRouter } from '@tanstack/react-router'
 import 'leaflet/dist/leaflet.css'
 
 // Fix default Leaflet marker icons
@@ -138,7 +138,8 @@ export default function KMLSatelliteMap() {
   const { destination } = useParams({ from: '/destinations/$destination' })
   const [features, setFeatures] = useState<KMLFeature[]>([])
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
-
+  const router = useRouter()
+  const videoPlayingRef = router.options.context.videoPlayingRef
   useEffect(() => {
     fetch('/kml/routes.kml')
       .then((res) => res.text())
@@ -245,12 +246,15 @@ export default function KMLSatelliteMap() {
       {/* 🎥 Video */}
       <div className="flex-1 flex items-center justify-center">
         {videoUrl ? (
-          <video
+            <video
             key={videoUrl}
             src={videoUrl}
             controls
             className="w-full max-h-[60vh] rounded-xl shadow-md"
             preload="metadata"
+            onPlay={() => (videoPlayingRef.current = true)}
+            onPause={() => (videoPlayingRef.current = false)}
+            onEnded={() => (videoPlayingRef.current = false)}
           />
         ) : (
           <div className="text-gray-500 italic">No video available for this route.</div>

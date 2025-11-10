@@ -16,17 +16,10 @@ function DestinationPage() {
 
   return (
     <div className="p-6 text-center">
-      <h1 className="text-3xl font-bold mb-4">{destination}</h1>
 
-      <div className="flex justify-center gap-4 mb-4">
-      <div className="flex justify-center gap-4 mb-4">
-  <Link to={`/destinations/${destination}/walking`} className="text-blue-600 underline">🚶 Walking</Link>
-  <Link to={`/destinations/${destination}/bus`} className="text-blue-600 underline">🚌 Bus</Link>
-  <Link to={`/destinations/${destination}/taxi`} className="text-blue-600 underline">🚕 Taxi</Link>
-</div>
 
-      </div>
         <Outlet />
+        <Link to={`/destinations`} className="text-3xl text-center font-semibold border rounded-lg p-8 m-6 shadow-lg">Tagasi</Link>
     </div>
   )
 }
