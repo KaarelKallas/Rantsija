@@ -19,25 +19,63 @@ function SelectionPage() {
   const end = current?.coordinates?.[0] || null
    //console.log('Current destination coordinates:', end)
   const osrmMode = 'walking'
+  const routeCache = new Map<string, [number, number][]>()
 
-  useEffect(() => {
-    if (!end) return
-    const fetchRoute = async () => {
-      try {
-        const url = `https://router.project-osrm.org/route/v1/${osrmMode}/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`
-       // console.log('Fetching route from OSRM:', url)
-        const res = await fetch(url)
-        const data = await res.json()
-        if (data.routes?.length) {
-          const coords = data.routes[0].geometry.coordinates.map(([lon, lat]: [number, number]) => [lat, lon])
-          setRouteCoords(coords)
+  function useCachedRoute(
+    destination: string,
+    start: [number, number],
+    end: [number, number],
+    mode: 'walking' | 'driving' | 'cycling' = 'walking'
+  ) {
+    const [routeCoords, setRouteCoords] = useState<[number, number][]>([])
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    useEffect(() => {
+        if (!destination || !end) return
+        const cacheKey = `${destination}-${mode}`
+
+        // Check cache first
+        if (routeCache.has(cacheKey)) {
+          setRouteCoords(routeCache.get(cacheKey)!)
+          return
         }
-      } catch (e) {
-        console.error('Error fetching route', e)
-      }
+
+        let cancelled = false
+        setLoading(true)
+        setError(null)
+
+        const fetchRoute = async () => {
+          try {
+            const url = `https://router.project-osrm.org/route/v1/${mode}/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`
+            const res = await fetch(url)
+            const data = await res.json()
+
+            if (!cancelled && data.routes?.length) {
+              const coords = data.routes[0].geometry.coordinates.map(
+                ([lon, lat]: [number, number]) => [lat, lon]
+              )
+              routeCache.set(cacheKey, coords) // ✅ cache it
+              setRouteCoords(coords)
+            }
+          } catch (err) {
+            if (!cancelled) {
+              console.error('Error fetching route', err)
+              setError('Failed to fetch route')
+            }
+          } finally {
+            if (!cancelled) setLoading(false)
+          }
+        }
+
+        fetchRoute()
+
+        return () => {
+          cancelled = true
+        }
+      }, [destination, start, end, mode])
+
+      return { routeCoords, loading, error }
     }
-    fetchRoute()
-  }, [start, end, osrmMode])
 
   // --- Render Section ---
   if (!destinations.length) {
