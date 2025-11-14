@@ -193,12 +193,12 @@ export default function KMLSatelliteMap() {
   const bounds = allCoords.length ? L.latLngBounds(allCoords) : undefined
 
   return (
-    <div className="flex flex-col md:flex-row gap-4">
+    <div className="flex w-full pb-4 md:flex-row gap-4">
       <div className="flex-1">
         <MapContainer
           center={center}
           zoom={15}
-          style={{ height: '60vh', width: '100%' }}
+          style={{ height: '70vh', width: '100%' }}
           bounds={filteredFeatures.length ? bounds : undefined}
           scrollWheelZoom
         >
@@ -250,7 +250,7 @@ export default function KMLSatelliteMap() {
             key={videoUrl}
             src={videoUrl}
             controls
-            className="w-full max-h-[60vh] rounded-xl shadow-md"
+            className="w-full max-h-[72vh] rounded-xl shadow-md"
             preload="metadata"
             onPlay={() => (videoPlayingRef.current = true)}
             onPause={() => (videoPlayingRef.current = false)}

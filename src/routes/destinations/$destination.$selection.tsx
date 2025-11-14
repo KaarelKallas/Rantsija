@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useDestinationsFromKML } from '../../components/useDestinationsFromKML'
 import KMLSatelliteMap from '@/components/KMLSatelliteMap'
 
@@ -87,11 +87,11 @@ function SelectionPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-2 pb-3 text-center">{destination}</h1>
 
       <KMLSatelliteMap />
-
+                <Link to={`/destinations`} className="text-5xl text-center font-semibold border rounded-lg py-10 pt-8 px-24 shadow-lg">Tagasi</Link>
       <div className="text-center mt-4" />
     </div>
   )

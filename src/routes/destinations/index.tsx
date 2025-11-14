@@ -17,7 +17,7 @@ function DestinationsList() {
         .filter(d => d.type === 'Point')
         .map((d) => (
 
-            <Link to={d.name + `/walking`} className="text-3xl text-center font-semibold border rounded-lg p-8 shadow-lg">
+            <Link to={d.name + `/walking`} className="text-3xl text-center font-semibold border py-10 rounded-lg p-8 shadow-lg">
               {d.name}
             </Link>
 

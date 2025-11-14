@@ -19,7 +19,7 @@ function DestinationPage() {
 
 
         <Outlet />
-        <Link to={`/destinations`} className="text-3xl text-center font-semibold border rounded-lg p-8 m-6 shadow-lg">Tagasi</Link>
+    
     </div>
   )
 }
