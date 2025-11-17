@@ -1,6 +1,6 @@
 import { StrictMode, useRef } from 'react'
 import ReactDOM from 'react-dom/client'
-import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { RouterProvider, createRouter, createHashHistory } from '@tanstack/react-router'
 import data from './data/data.json'
 import { routeTree } from './routeTree.gen'
 import './styles.css'
@@ -9,6 +9,7 @@ import { useInactivityTimer } from './hooks/useInactivityTimer'
 
 const router = createRouter({
   routeTree,
+  history: createHashHistory(),
   context: { destinations: data, videoPlayingRef: null }, // placeholder
   defaultPreload: 'intent',
   scrollRestoration: true,

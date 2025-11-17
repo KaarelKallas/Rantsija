@@ -1,31 +1,19 @@
-const { app, BrowserWindow } = require("electron");
+// main.cjs
+const { BrowserWindow, app } = require("electron");
 const path = require("path");
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1280,
+    width: 1200,
     height: 800,
-    fullscreen: true, // kiosk mode
-    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
+      nodeIntegration: false,
       contextIsolation: true,
-      nodeIntegration: false
-    }
+    },
   });
 
-  if (!app.isPackaged) {
-    // Load Vite dev server
-    win.loadURL("http://localhost:3000");
-    win.webContents.openDevTools();
-  } else {
-    // Load production build
-    win.loadFile(path.join(__dirname, "../dist/index.html"));
-  }
+  win.loadURL("http://localhost:5173"); // or your production index.html
 }
 
 app.whenReady().then(createWindow);
-
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
-});

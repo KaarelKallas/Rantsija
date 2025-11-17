@@ -19,56 +19,6 @@ interface KMLFeature {
   properties: { name?: string; description?: string }
 }
 
-// --- CONFIG ---
-const DEBUG_MATCHING = false // set true to see detailed logs
-
-// Words that are too generic to match meaningfully
-const STOPWORDS = new Set([
-  'bussijaam',
-  'buss',
-  'peatus',
-  'kontor',
-  'jaam',
-  'stop',
-  'busstop',
-  'takso',
-  'peatused',
-  'maja',
-  'st',
-  'stopi',
-  'koht',
-])
-
-// Town or region names to ignore for matching
-const CITYNAMES = new Set(['kuressaare', 'saaremaa', 'tallinn', 'tartu'])
-
-function normalizeStr(s: string) {
-  return s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim()
-}
-
-function tokensFromName(s: string) {
-  const normalized = normalizeStr(s)
-  return normalized
-    .split(/\s+/)
-    .filter((t) => t.length > 1 && !STOPWORDS.has(t) && !CITYNAMES.has(t))
-}
-
-function namesStrongMatch(featureName?: string, destinationName?: string): boolean {
-  if (!featureName || !destinationName) return false
-  const fTokens = tokensFromName(featureName)
-  const dTokens = tokensFromName(destinationName)
-  const intersection = dTokens.filter((t) => fTokens.includes(t))
-  if (intersection.length > 0) return true
-  const nf = normalizeStr(featureName).replace(/\s+/g, '')
-  const nd = normalizeStr(destinationName).replace(/\s+/g, '')
-  return nf.includes(nd) || nd.includes(nf)
-}
-
 // 🗺️ Fit map to features
 function FitMapBounds({ features }: { features: KMLFeature[] }) {
   const map = useMap()
@@ -95,42 +45,57 @@ function FitMapBounds({ features }: { features: KMLFeature[] }) {
   return null
 }
 
-// 🎥 Try to find the best matching video in /public/videos/fixed
-async function findMatchingVideo(
-  features: KMLFeature[],
-  destinationName: string
-): Promise<string | null> {
-  // Try to find a LineString whose name matches the destination
-  const lineFeature = features.find(
-    (f) => f.type === 'LineString' && namesStrongMatch(f.properties?.name, destinationName)
-  )
-
-  let guess = normalizeStr(destinationName).replace(/\s+/g, '-')
-  if (lineFeature?.properties?.name) {
-    guess = normalizeStr(lineFeature.properties.name).replace(/\s+/g, '-')
+// --- UTIL: normalize strings for matching ---
+// Normalize strings for matching: lowercase, remove accents, remove punctuation
+function normalizeStr(s: string) {
+    return s
+      .normalize('NFD') // decompose accented letters
+      .replace(/[\u0300-\u036f]/g, '') // remove accents
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ') // remove non-letter/number chars
+      .trim()
   }
 
-  // Dynamically import all videos under /public/videos/fixed
-  const videos = import.meta.glob('/public/videos/fixed/*.mp4', { eager: true })
-  const available = Object.keys(videos).map((p) => ({
-    path: p.replace('/public', ''),
-    norm: normalizeStr(p.split('/').pop()?.replace('.mp4', '') || ''),
-  }))
+  // Split name into tokens, filter out short or generic words
+  const STOPWORDS = new Set([
+    'bussijaam', 'buss', 'peatus', 'kontor', 'jaam', 'stop', 'busstop',
+    'takso', 'peatused', 'maja', 'st', 'stopi', 'koht'
+  ])
+  const CITYNAMES = new Set(['kuressaare', 'saaremaa', 'tallinn', 'tartu'])
 
-  const normalizedGuess = normalizeStr(guess)
-  const match =
-    available.find((v) => v.norm === normalizedGuess) ||
-    available.find((v) => v.norm.includes(normalizedGuess)) ||
-    available.find((v) => normalizedGuess.includes(v.norm)) ||
-    null
-
-  if (DEBUG_MATCHING) {
-    console.log('Video guess:', guess)
-    console.log('Available videos:', available)
-    console.log('Matched video:', match)
+  function tokensFromName(s: string) {
+    const normalized = normalizeStr(s)
+    return normalized
+      .split(/\s+/)
+      .filter(t => t.length > 1 && !STOPWORDS.has(t) && !CITYNAMES.has(t))
   }
 
-  return match ? match.path : null
+
+function namesOverlap(a?: string, b?: string) {
+  if (!a || !b) return 0
+  const tokensA = tokensFromName(a)
+  const tokensB = tokensFromName(b)
+  return tokensA.filter(t => tokensB.includes(t)).length
+}
+
+// --- VIDEO MATCHING ---
+function findBestMatchingVideo(destinationName: string, videoFiles: string[]) {
+  const destNorm = normalizeStr(destinationName)
+
+  let bestMatch: string | null = null
+  let maxOverlap = 0
+
+  for (const v of videoFiles) {
+    const fileName = v.split('/').pop()?.replace(/\.mp4$/, '') || ''
+    const overlap = namesOverlap(destNorm, fileName)
+
+    if (overlap > maxOverlap) {
+      maxOverlap = overlap
+      bestMatch = v
+    }
+  }
+
+  return bestMatch
 }
 
 // 🧭 MAIN COMPONENT
@@ -140,10 +105,12 @@ export default function KMLSatelliteMap() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const router = useRouter()
   const videoPlayingRef = router.options.context.videoPlayingRef
+
+  // --- LOAD KML ---
   useEffect(() => {
     fetch('/kml/routes.kml')
-      .then((res) => res.text())
-      .then((kmlText) => {
+      .then(res => res.text())
+      .then(kmlText => {
         const parser = new DOMParser()
         const kmlDom = parser.parseFromString(kmlText, 'text/xml')
         const geojson = toGeoJSON.kml(kmlDom)
@@ -153,43 +120,65 @@ export default function KMLSatelliteMap() {
           properties: f.properties,
         }))
         setFeatures(extracted)
-        if (DEBUG_MATCHING) console.log('Loaded features:', extracted)
       })
       .catch(console.error)
   }, [])
 
+  // --- FILTER FEATURES FOR DESTINATION ---
+  function namesOverlap(a: string, b: string) {
+    const aTokens = tokensFromName(a)
+    const bTokens = tokensFromName(b)
+    return bTokens.filter(t => aTokens.includes(t)).length
+  }
+
   const filteredFeatures = useMemo(() => {
     if (!destination) return []
-    return features.filter((f) => namesStrongMatch(f.properties?.name, destination))
+
+    const destNorm = normalizeStr(destination)
+
+    const points = features.filter(f => f.type === 'Point')
+    const polylines = features.filter(f => f.type === 'LineString')
+
+    // Keep best matching points
+    let maxPointOverlap = 0
+    const bestPoints = points
+      .map(f => {
+        const overlap = f.properties?.name ? namesOverlap(f.properties.name, destNorm) : 0
+        if (overlap > maxPointOverlap) maxPointOverlap = overlap
+        return { feature: f, overlap }
+      })
+      .filter(f => f.overlap === maxPointOverlap && maxPointOverlap > 0)
+      .map(f => f.feature)
+
+    // Keep polylines with any overlap
+    const matchedPolylines = polylines.filter(f =>
+      f.properties?.name && namesOverlap(f.properties.name, destNorm) > 0
+    )
+
+    return [...bestPoints, ...matchedPolylines]
   }, [features, destination])
 
-  // Load best matching video
+
+  // --- LOAD VIDEOS ---
   useEffect(() => {
     if (!destination) return
-    findMatchingVideo(filteredFeatures, destination).then(setVideoUrl)
+
+    // Import all videos automatically
+    const videoModules = import.meta.glob('/public/videos/fixed/*.mp4', { eager: true })
+    const videoFiles = Object.keys(videoModules).map(p => p.replace('/public', ''))
+
+    const matched = findBestMatchingVideo(destination, videoFiles)
+    setVideoUrl(matched)
   }, [destination, filteredFeatures])
 
   const center: [number, number] = [58.25, 22.48]
-
-  const allCoords: [number, number][] = filteredFeatures.flatMap((f) =>
+  const allCoords: [number, number][] = filteredFeatures.flatMap(f =>
     f.type === 'Point'
-      ? (() => {
-          const c = f.coordinates as number[]
-          const lon = Number(c[0])
-          const lat = Number(c[1])
-          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return []
-          return [[lat, lon] as [number, number]]
-        })()
-      : (f.coordinates as number[][])
-          .map((c) => {
-            const lon = Number(c[0])
-            const lat = Number(c[1])
-            if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
-            return [lat, lon] as [number, number]
-          })
-          .filter((v): v is [number, number] => v !== null)
+      ? (f.coordinates as number[]).length === 2
+        ? [[(f.coordinates as number[])[1], (f.coordinates as number[])[0]] as [number, number]]
+        : []
+      : (f.coordinates as number[][]).map(([lon, lat]) => [lat, lon])
   )
-
   const bounds = allCoords.length ? L.latLngBounds(allCoords) : undefined
 
   return (
@@ -209,7 +198,7 @@ export default function KMLSatelliteMap() {
           <FitMapBounds features={filteredFeatures} />
 
           {filteredFeatures
-            .filter((f) => f.type === 'Point')
+            .filter(f => f.type === 'Point')
             .map((f, i) => {
               const c = f.coordinates as number[]
               const lon = Number(c[0])
@@ -217,13 +206,7 @@ export default function KMLSatelliteMap() {
               if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
               return (
                 <Marker key={`pt-${i}`} position={[lat, lon]}>
-                  <Tooltip
-                    className="text-xl font-bold"
-                    offset={[-14, 26]}
-                    direction="auto"
-                    opacity={0.8}
-                    permanent
-                  >
+                  <Tooltip className="text-xl font-bold" offset={[-14, 26]} direction="auto" opacity={0.8} permanent>
                     {f.properties.name || 'Point'}
                   </Tooltip>
                 </Marker>
@@ -231,14 +214,9 @@ export default function KMLSatelliteMap() {
             })}
 
           {filteredFeatures
-            .filter((f) => f.type === 'LineString')
+            .filter(f => f.type === 'LineString')
             .map((f, i) => (
-              <Polyline
-                key={`ln-${i}`}
-                positions={(f.coordinates as number[][]).map(([lon, lat]) => [lat, lon])}
-                color="red"
-                weight={4}
-              />
+              <Polyline key={`ln-${i}`} positions={(f.coordinates as number[][]).map(([lon, lat]) => [lat, lon])} color="red" weight={4} />
             ))}
         </MapContainer>
       </div>
@@ -246,7 +224,7 @@ export default function KMLSatelliteMap() {
       {/* 🎥 Video */}
       <div className="flex-1 flex items-center justify-center">
         {videoUrl ? (
-            <video
+          <video
             key={videoUrl}
             src={videoUrl}
             controls
