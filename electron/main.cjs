@@ -1,7 +1,11 @@
 // main.cjs
 const { BrowserWindow, app } = require("electron");
 const path = require("path");
-
+ipcMain.handle("get-video-folder", () => {
+    // Handles both installed app and portable modes
+    const exeDir = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(app.getPath("exe"));
+    return path.join(exeDir, "videos");
+  });
 function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
