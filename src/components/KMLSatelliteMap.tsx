@@ -1,9 +1,12 @@
+// KMLSatelliteMap.tsx
 import { useEffect, useState, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Polyline, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import * as toGeoJSON from 'togeojson'
 import { useParams, useRouter } from '@tanstack/react-router'
 import 'leaflet/dist/leaflet.css'
+import fs from 'fs'
+import path from 'path'
 
 // Fix default Leaflet marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -45,31 +48,29 @@ function FitMapBounds({ features }: { features: KMLFeature[] }) {
   return null
 }
 
-// --- UTIL: normalize strings for matching ---
-// Normalize strings for matching: lowercase, remove accents, remove punctuation
+// --- UTILITIES ---
+
+const STOPWORDS = new Set([
+  'bussijaam', 'buss', 'peatus', 'kontor', 'jaam', 'stop', 'busstop',
+  'takso', 'peatused', 'maja', 'st', 'stopi', 'koht'
+])
+const CITYNAMES = new Set(['kuressaare', 'saaremaa', 'tallinn', 'tartu'])
+
 function normalizeStr(s: string) {
-    return s
-      .normalize('NFD') // decompose accented letters
-      .replace(/[\u0300-\u036f]/g, '') // remove accents
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}]+/gu, ' ') // remove non-letter/number chars
-      .trim()
-  }
+  return s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+}
 
-  // Split name into tokens, filter out short or generic words
-  const STOPWORDS = new Set([
-    'bussijaam', 'buss', 'peatus', 'kontor', 'jaam', 'stop', 'busstop',
-    'takso', 'peatused', 'maja', 'st', 'stopi', 'koht'
-  ])
-  const CITYNAMES = new Set(['kuressaare', 'saaremaa', 'tallinn', 'tartu'])
-
-  function tokensFromName(s: string) {
-    const normalized = normalizeStr(s)
-    return normalized
-      .split(/\s+/)
-      .filter(t => t.length > 1 && !STOPWORDS.has(t) && !CITYNAMES.has(t))
-  }
-
+function tokensFromName(s: string) {
+  const normalized = normalizeStr(s)
+  return normalized
+    .split(/\s+/)
+    .filter(t => t.length > 1 && !STOPWORDS.has(t) && !CITYNAMES.has(t))
+}
 
 function namesOverlap(a?: string, b?: string) {
   if (!a || !b) return 0
@@ -78,23 +79,19 @@ function namesOverlap(a?: string, b?: string) {
   return tokensA.filter(t => tokensB.includes(t)).length
 }
 
-// --- VIDEO MATCHING ---
 function findBestMatchingVideo(destinationName: string, videoFiles: string[]) {
   const destNorm = normalizeStr(destinationName)
-
   let bestMatch: string | null = null
   let maxOverlap = 0
 
   for (const v of videoFiles) {
     const fileName = v.split('/').pop()?.replace(/\.mp4$/, '') || ''
     const overlap = namesOverlap(destNorm, fileName)
-
     if (overlap > maxOverlap) {
       maxOverlap = overlap
       bestMatch = v
     }
   }
-
   return bestMatch
 }
 
@@ -108,38 +105,39 @@ export default function KMLSatelliteMap() {
 
   // --- LOAD KML ---
   useEffect(() => {
-    fetch('/kml/routes.kml')
-      .then(res => res.text())
-      .then(kmlText => {
-        const parser = new DOMParser()
-        const kmlDom = parser.parseFromString(kmlText, 'text/xml')
-        const geojson = toGeoJSON.kml(kmlDom)
-        const extracted: KMLFeature[] = geojson.features.map((f: any) => ({
-          type: f.geometry.type,
-          coordinates: f.geometry.coordinates,
-          properties: f.properties,
-        }))
-        setFeatures(extracted)
-      })
-      .catch(console.error)
-  }, [])
+    async function loadKML() {
+        const base = await window.api.getKmlPath(); // "C:/rantsija/kml"
+        const filePath = `${base.replace(/\\/g, "/")}/routes.kml`;
+
+        const response = await fetch(`file:///${filePath}`);
+        const text = await response.text();
+
+
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(text, "text/xml");
+      const geojson = toGeoJSON.kml(xml);
+
+      const extracted = geojson.features.map((f) => ({
+        type: f.geometry.type,
+        coordinates: f.geometry.coordinates,
+        properties: f.properties,
+      }));
+
+      setFeatures(extracted);
+    }
+
+    loadKML();
+  }, []);
+
 
   // --- FILTER FEATURES FOR DESTINATION ---
-  function namesOverlap(a: string, b: string) {
-    const aTokens = tokensFromName(a)
-    const bTokens = tokensFromName(b)
-    return bTokens.filter(t => aTokens.includes(t)).length
-  }
-
   const filteredFeatures = useMemo(() => {
     if (!destination) return []
 
     const destNorm = normalizeStr(destination)
-
     const points = features.filter(f => f.type === 'Point')
     const polylines = features.filter(f => f.type === 'LineString')
 
-    // Keep best matching points
     let maxPointOverlap = 0
     const bestPoints = points
       .map(f => {
@@ -150,7 +148,6 @@ export default function KMLSatelliteMap() {
       .filter(f => f.overlap === maxPointOverlap && maxPointOverlap > 0)
       .map(f => f.feature)
 
-    // Keep polylines with any overlap
     const matchedPolylines = polylines.filter(f =>
       f.properties?.name && namesOverlap(f.properties.name, destNorm) > 0
     )
@@ -158,19 +155,44 @@ export default function KMLSatelliteMap() {
     return [...bestPoints, ...matchedPolylines]
   }, [features, destination])
 
-
   // --- LOAD VIDEOS ---
   useEffect(() => {
-    if (!destination) return
+    if (!destination) return;
 
-    // Import all videos automatically
-    const videoModules = import.meta.glob('/public/videos/fixed/*.mp4', { eager: true })
-    const videoFiles = Object.keys(videoModules).map(p => p.replace('/public', ''))
+    async function loadVideo() {
+      try {
+        // Ask Electron for folder (C:\rantsija\videos)
+        const videoBasePath = await window.api.getVideoBasePath();
+        const fileList = await window.api.listVideos();
 
-    const matched = findBestMatchingVideo(destination, videoFiles)
-    setVideoUrl(matched)
-  }, [destination, filteredFeatures])
+        if (!fileList || fileList.length === 0) {
+          console.warn("No videos found in external folder");
+          setVideoUrl(null);
+          return;
+        }
 
+        // Find best match
+        const matchedFile = findBestMatchingVideo(destination, fileList);
+        if (!matchedFile) {
+          setVideoUrl(null);
+          return;
+        }
+
+        // Build final URL
+        const finalPath = `file:///${videoBasePath.replace(/\\/g, "/")}/${matchedFile}`;
+        setVideoUrl(finalPath);
+      } catch (err) {
+        console.error("Failed to load video:", err);
+        setVideoUrl(null);
+      }
+    }
+
+    loadVideo();
+  }, [destination]);
+
+
+
+  // --- MAP SETUP ---
   const center: [number, number] = [58.25, 22.48]
   const allCoords: [number, number][] = filteredFeatures.flatMap(f =>
     f.type === 'Point'
